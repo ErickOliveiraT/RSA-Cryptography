@@ -1,39 +1,81 @@
-from random import randint
+from multiprocessing import Process
+from random import choice
+import time
 import sys
 import os
 
 clear = lambda: os.system('cls')
 pause = lambda: os.system('pause')
 
-def is_prime(num):
-	for i in range(2,num):
-		if num%i == 0:
-			return False
-	return True
+lower = 'abcdefghijklmnopqrstuvwxyz'
+upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+numbers = '0123456789'
+special = ' '
+pos = '¨¨'
+pos += lower + upper + numbers + special
 
-def calc_e(totn):
-  x = True
-  while x == True:
-    div_e = []
-    div_totn = []
-    e = randint(2,totn-1)   
-    for i in range(2,totn+1):
-      if totn%i == 0:
-        div_totn.append(i)
-    for i in range(2,e+1):
-      if e%i == 0:
-        div_e.append(i)   
-    if len(div_e) > len(div_totn):
-      bigger = div_e
-      smaller = div_totn
+def is_prime(num):
+  for i in range(2,num):
+    if num % i == 0:
+      return False
+  return True
+
+def verify_divisors(vt1, vt2):
+  for i in vt1:
+    for j in vt2:
+      if i == j and i != 1:
+        return True
+  return False
+
+def get_e_lowProcessing(totn):
+  tn_divisors = []
+  for i in range(1,totn+1):
+    if totn % i == 0:
+      tn_divisors.append(i)
+  pos_e = []
+  e = 2
+  while e < totn:
+    e_divisors = []
+    for i in range(1,e+1):
+      if e % i == 0:
+        e_divisors.append(i)
+    flag = verify_divisors(tn_divisors, e_divisors)
+    if flag == False:
+        return e
     else:
-      bigger = div_totn
-      smaller = div_e
-    x = False
-    for i in range(0,len(bigger)):
-      for j in range(0,len(smaller)):
-        if smaller[j] == bigger[i]:
-          x = True 
+      e += 1
+
+def get_e(totn):
+  tn_divisors = []
+  total = (2*totn)-2
+  cont = 0
+  for i in range(1,totn+1):
+    cont += 1
+    p = (100*cont)/total
+    p = round(p,2)
+    print('Calculing Public Keys: ', end='')
+    print(str(p) + ' %')
+    clear()
+    if totn % i == 0:
+      tn_divisors.append(i)
+  pos_e = []
+  e = 2
+  while e < totn:
+    e_divisors = []
+    cont += 1
+    p = (100*cont)/total
+    p = round(p,2)
+    print('Calculing Public Keys: ', end='')
+    print(str(p) + ' %')
+    clear()
+    for i in range(1,e+1):
+      if e % i == 0:
+        e_divisors.append(i)
+    flag = verify_divisors(tn_divisors, e_divisors)
+    if flag == False:
+      pos_e.append(e)
+    e += 1
+  e = choice(pos_e)
   return e
 
 def inv_mult(e, totn):
@@ -42,98 +84,138 @@ def inv_mult(e, totn):
 		if de%totn == 1:
 			return d
 
-def generate_keys():
-	print("\t Generate Keys\n")
-	x = False
-	while x == False:
-		p = int(input('Insert a prime number p: '))
-		x = is_prime(p)
-		if x == False:
-			print(str(p) + ' is not a prime number')
-	x = False
-	while x == False:
-		q = int(input('Insert a prime number q: '))
-		x = is_prime(q)
-		if x == False:
-			print(str(q) + ' is not a prime number')
-	n = p*q
-	totn = (p-1)*(q-1)
-	e = calc_e(totn)
-	d = inv_mult(e,totn)
-	print("\nPublic Keys:")
-	print("n = " + str(n))
-	print("e = " + str(e))
-	print("\nPrivate Keys:")
-	print("p = " + str(p))
-	print("q = " + str(q))
-	print("d = " + str(d) + '\n')
-	pause()
-	clear()
-	menu()
-	
-def encode(message, n, e):
-	print("Encrypted message:\n")
-	for i in message:
-		m = ord(i)
-		me = m ** e #m^e
-		c = me%n
-		print(c, end=' ')
-	print("\n\n")
-	pause()
-	clear()
-	menu()
+def encode(msg, n, e):
+  global buff
+  buff = ''
+  print('\nEncrypted message:\n')
+  for i in msg:
+    m = pos.find(i)
+    me = m ** e
+    c = me % n
+    print(str(c), end=' ')
+    buff += str(c) + ' '
+  print('\n')
 
-def decode(message, p, q, d):
-  message += ' '
+def decode(msg, p, q, d):
+  msg += ' '
   n = p*q
   buff = ''
   ant = 0
   atual = 0
-  print("Decrypted message:\n")
-  for atual in range(0,len(message)):
-    if message[atual] == ' ':
+  print('\nDecrypted message:\n')
+  for atual in range(0,len(msg)):
+    if msg[atual] == ' ':
       for i in range(ant,atual):
-        buff += message[i]
+        buff += msg[i]
       c = int(buff)
       cd = c ** d #c^d
       m = cd%n
-      print(chr(m), end="")
+      print(pos[m], end='')
       buff = ''
       ant = atual+1
+  print('\n')
+
+def generate_keys():
+  print('\tGenerate Keys\n')
+  p = int(input('p = '))
+  if (is_prime(p) == False or p < 11):
+    print('\nInvalid input!\n')
+    print('p must be a prime number bigger than 11\n')
+    pause()
+    clear()
+    generate_keys()
+  q = int(input('q = '))
+  if (is_prime(q) == False or p < 11):
+    print('\nInvalid input!\n')
+    print('q must be a prime number bigger than 11\n')
+    pause()
+    clear()
+    generate_keys()
+    sys.exit()
+  op = input('\nEnable Low Processing Mode (Faster but less secure)? (y/n) ')
+  if op == 'y' or op == 'Y':
+    reduce_processing = True
+    clear()
+  else:
+    reduce_processing = False
+  start = time.time()
+  n = p*q
+  totn = (p-1)*(q-1)
+  if reduce_processing:
+    e = get_e_lowProcessing(totn)
+  else:
+    e = get_e(totn)
+  d = inv_mult(e, totn)
+  end = time.time()
+  tempo = int(end - start)
+  hr = int(tempo/3600)
+  tempo = tempo%3600
+  mn = int(tempo/60)
+  tempo = tempo%60
+  sec = tempo
+
+  print('Public keys:\n')
+  print('n = ' + str(n))
+  print('e = ' + str(e) + '\n')
+  print('Private keys:\n')
+  print('p = ' + str(p))
+  print('q = ' + str(q))
+  print('d = ' + str(d) + '\n')
+
+  print('Time elapsed: ' + str(hr) + 'h ' + str(mn) + 'min ' + str(sec) + 's\n')
+  
+  op = input('Save to file? (y/n) ')
+  if op == 'Y' or op == 'y':
+    arq = open('keys.txt', 'w')
+    arq.write('Public keys:\n')
+    arq.write('n = ' + str(n) + '\n')
+    arq.write('e = ' + str(e) + '\n')
+    arq.write('Private keys:\n')
+    arq.write('p = ' + str(p) + '\n')
+    arq.write('q = ' + str(q) + '\n')
+    arq.write('d = ' + str(d) + '\n')
+    arq.close()
+  #os.system('keys.txt')
   print('\n\n')
   pause()
-  clear()		
-  menu()
 
 def menu():
-	print('\t RSA Algorithm\n')
-	print(' 1 - Generate keys\n 2 - Encode\n 3 - Decode\n 4 - Exit\n')
-	op = int(input('Option: '))
-	if op == 1:
-		clear()
-		generate_keys()
-	elif op == 2:
-		clear()
-		print("Enter the public keys\n")
-		n = int(input("n = "))
-		e = int(input("e = "))
-		clear()
-		message = input("Enter your message:\n\n")
-		clear()
-		encode(message, n, e)
-		encode()
-	elif op == 3:
-		clear()
-		print("Enter the private keys\n")
-		p = int(input("p = "))
-		q = int(input("q = "))
-		d = int(input("d = "))
-		clear()
-		message = input("Enter the encrypted message:\n\n")
-		clear()
-		decode(message, p, q, d)
-		decode()
-	elif op == 4:
-		sys.exit()
+  print('\tChoose an Option\n')
+  print('1 - Generate keys')
+  print('2 - Encode')
+  print('3 - Decode')
+  print('4 - Exit\n')
+  op = int(input('Option: '))
+  if op == 1:
+    clear()
+    generate_keys()
+    clear()
+    menu()
+  elif op == 2:
+    clear()
+    print('\tEncode\n')
+    n = int(input('n = '))
+    e = int(input('e = '))
+    msg = input('\nMessage:\n\n')
+    encode(msg, n, e)
+    print('\n')
+    pause()
+    clear()
+    menu()
+  elif op == 3:
+    clear()
+    print('\tDecode\n')
+    p = int(input('p = '))
+    q = int(input('q = '))
+    d = int(input('d = '))
+    msg = input('\nMessage:\n\n')
+    decode(msg, p, q, d)
+    print('\n')
+    pause()
+    clear()
+    menu()
+  elif op == 4:
+    sys.exit()
 
+os.system('color 0a')
 menu()
